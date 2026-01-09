@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Painel de Gestão</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Russo+One&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* --- RESET E BASE --- */
+        * { box-sizing: border-box; }
+        body { font-family: 'Montserrat', sans-serif; color: #e0e0e0; margin: 0; background-color: #050505; overflow-x: hidden; }
+
+        /* --- LAYOUT --- */
+        .admin-layout { display: flex; min-height: 100vh; }
+
+        /* HEADER MOBILE */
+        .mobile-header { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 60px; background: #000; border-bottom: 2px solid #ff5e00; z-index: 2000; align-items: center; justify-content: space-between; padding: 0 20px; box-shadow: 0 5px 20px rgba(255, 94, 0, 0.2); }
+        .mobile-header h3 { color: #fff; margin: 0; font-size: 1.2rem; }
+        .btn-hamburger { background: none; border: none; color: #ff5e00; font-size: 24px; cursor: pointer; }
+
+        /* SIDEBAR */
+        .sidebar { width: 260px; background: #080808; border-right: 1px solid #333; padding: 20px; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 2100; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .sidebar h2 { font-size: 1.5rem; text-align: center; color: white; margin-bottom: 40px; text-shadow: 0 0 10px rgba(255, 255, 255, 0.2); }
+        .btn-nav { background: transparent; color: #888; border: none; padding: 15px; text-align: left; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; width: 100%; transition: 0.3s; }
+        .btn-nav:hover, .btn-nav.ativo { background: #1a1a1a; color: #ff5e00; border-left: 3px solid #ff5e00; }
+        .btn-sair { margin-top: auto; color: #ff4444; }
+
+        /* OVERLAY */
+        .menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2050; display: none; backdrop-filter: blur(3px); }
+
+        /* CONTEÚDO */
+        .content-area { margin-left: 260px; flex-grow: 1; padding: 40px; width: calc(100% - 260px); }
+        
+        /* ESCONDER SEÇÕES (Sistema de Abas) */
+        .tab-content { display: none; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- CARDS & FORMS --- */
+        .card { background: #121212; border: 1px solid #333; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #ff5e00; font-weight: bold; font-size: 0.9rem; }
+        input, select, textarea { width: 100%; padding: 12px; background: #000; border: 1px solid #444; border-radius: 6px; color: white; outline: none; font-size: 16px; }
+        input:focus { border-color: #ff5e00; }
+        
+        .btn-acao { width: 100%; padding: 15px; border-radius: 8px; font-weight: 900; border: none; cursor: pointer; text-transform: uppercase; }
+        .btn-salvar { background: #ff5e00; color: #000; transition: 0.3s; }
+        .btn-salvar:hover { background: #cc4b00; }
+        .btn-add { background: #222; color: #ff5e00; border: 1px solid #ff5e00; margin-top: 10px; }
+        .btn-remove { background: #330000; color: red; border: 1px solid red; padding: 8px; width: 100%; margin-top: 5px; }
+
+        .variacao-row { background: #1a1a1a; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #333; }
+        .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; } 
+        
+        /* --- DASHBOARD WIDGETS --- */
+        .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .dash-card { background: #1a1a1a; padding: 20px; border-radius: 10px; border-top: 3px solid #333; display: flex; flex-direction: column; justify-content: space-between; }
+        .dash-card h4 { margin: 0; color: #888; font-size: 0.9rem; }
+        .dash-card .valor { font-size: 1.8rem; font-weight: bold; color: #fff; margin-top: 10px; }
+        .dash-card.destaque { border-color: #ff5e00; background: linear-gradient(180deg, #1a1a1a 0%, #251000 100%); }
+        .dash-card.destaque .valor { color: #ff5e00; }
+
+        /* --- PEDIDOS E TABELAS --- */
+        .vendas-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .vendas-table th, .vendas-table td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
+        .vendas-table th { color: #ff5e00; font-size: 0.9em; text-transform: uppercase; background: #1a1a1a; }
+        .vendas-table tr:hover { background: #1a1a1a; }
+        
+        /* Status Badges */
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+        .badge-pendente { background: #ffcc00; color: #000; }
+        .badge-aprovado { background: #00cc66; color: #fff; }
+        .badge-cancelado { background: #cc0000; color: #fff; }
+
+        /* Botões de Ação na Tabela */
+        .btn-action { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; margin-right: 5px; font-weight: bold; }
+        .btn-approve { background: #00cc66; color: white; }
+        .btn-approve:hover { background: #00aa55; }
+        .btn-cancel { background: #ff4444; color: white; }
+        .btn-cancel:hover { background: #cc0000; }
+        
+        /* --- MOBILE --- */
+        @media (max-width: 768px) {
+            .mobile-header { display: flex; }
+            .sidebar { transform: translateX(-100%); width: 80%; }
+            .sidebar.aberto { transform: translateX(0); }
+            .menu-overlay.aberto { display: block; }
+            .content-area { margin-left: 0; width: 100%; padding: 20px; padding-top: 80px; }
+            .sidebar h2 { display: none; }
+            .variacao-row { display: flex; flex-direction: column; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="mobile-header">
+        <h3>PAINEL DE GESTÃO</h3>
+        <button class="btn-hamburger" onclick="toggleAdminMenu()">
+            <i class="fas fa-bars"></i>
+        </button>
+    </header>
+
+    <div class="menu-overlay" id="overlayAdmin" onclick="toggleAdminMenu()"></div>
+
+    <div class="admin-layout">
+        
+        <aside class="sidebar" id="sidebarAdmin">
+            <h2>ADMIN</h2>
+            <nav>
+                <button onclick="openTab('dashboard'); toggleAdminMenu()" class="btn-nav ativo tab-btn">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </button>
+                <button onclick="openTab('pedidos'); toggleAdminMenu()" class="btn-nav tab-btn">
+                    <i class="fas fa-clipboard-list"></i> Pedidos
+                </button>
+                <button onclick="openTab('produtos'); toggleAdminMenu()" class="btn-nav tab-btn">
+                    <i class="fas fa-box"></i> Produtos
+                </button>
+                <button onclick="openTab('revendedores'); toggleAdminMenu()" class="btn-nav tab-btn">
+                    <i class="fas fa-users"></i> Revendedores
+                </button>
+                <button onclick="openTab('config'); toggleAdminMenu()" class="btn-nav tab-btn">
+                    <i class="fas fa-paint-brush"></i> Configuração
+                </button>
+                <button onclick="window.location.href='/'" class="btn-nav">
+                    <i class="fas fa-home"></i> Ver Loja
+                </button>
+                <button onclick="window.location.href='/logout'" class="btn-nav btn-sair">
+                    <i class="fas fa-sign-out-alt"></i> Sair
+                </button>
+            </nav>
+        </aside>
+
+        <main class="content-area">
+            
+            <section id="dashboard" class="tab-content active">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h3 style="color:#fff; margin:0;">VISÃO GERAL</h3>
+                    <button onclick="carregarDashboard()" style="background:none; border:none; color:#ff5e00; cursor:pointer;"><i class="fas fa-sync"></i></button>
+                </div>
+                
+                <div class="dash-grid">
+                    <div class="dash-card destaque">
+                        <h4>FATURAMENTO (HOJE)</h4>
+                        <span class="valor" id="dash-faturamento">R$ 0,00</span>
+                    </div>
+                    <div class="dash-card">
+                        <h4>PENDENTES</h4>
+                        <span class="valor" id="dash-pendentes" style="color:#ffcc00">0</span>
+                    </div>
+                    <div class="dash-card">
+                        <h4>TICKET MÉDIO</h4>
+                        <span class="valor" id="dash-ticket">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <h4 style="color:#fff; margin-bottom:15px;">RENDIMENTO (ÚLTIMOS 7 DIAS)</h4>
+                    <div style="height: 300px; width: 100%;">
+                        <canvas id="graficoVendas"></canvas>
+                    </div>
+                </div>
+
+                <div class="card" id="card-estoque-baixo">
+                    <h4 style="color:#ff4444; margin-top:0;">⚠️ ALERTA DE ESTOQUE</h4>
+                    <ul id="lista-estoque-baixo" style="padding-left:20px; color:#ccc;">
+                        <li>Verificando...</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="pedidos" class="tab-content">
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3 style="color:#fff; margin:0;">GERENCIAR PEDIDOS</h3>
+                        <button onclick="carregarVendas()" style="background:#333; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">🔄 Atualizar</button>
+                    </div>
+                    
+                    <p style="color:#888; font-size:0.9em; margin-bottom:15px;">
+                        <i class="fas fa-info-circle"></i> Clique em <b>"Aprovar"</b> para confirmar o pagamento e baixar o estoque automaticamente.
+                    </p>
+
+                    <div class="table-container">
+                        <table class="vendas-table">
+                            <thead>
+                                <tr>
+                                    <th>#ID</th>
+                                    <th>Cliente</th>
+                                    <th>Revendedor</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-vendas">
+                                <tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="produtos" class="tab-content">
+                <div class="card">
+                    <h3 style="margin-top:0; color:#fff;">NOVO PRODUTO</h3>
+                    <form id="form-produto">
+                        <input type="hidden" id="id-produto-editando">
+                        <div class="form-group"><label>Nome do Produto</label><input type="text" name="nome" placeholder="Ex: Camiseta Tropa" required></div>
+                        <div style="display:flex; gap:10px;">
+                            <div class="form-group" style="flex:1"><label>Categoria</label><input type="text" name="categoria" placeholder="Ex: Vestuário"></div>
+                            <div class="form-group" style="flex:1"><label>Preço Base (R$)</label><input type="number" step="0.01" name="preco"></div>
+                        </div>
+                        <div class="form-group"><label>Imagem</label><input type="file" name="imagem" accept="image/*"></div>
+                        
+                        <div class="form-group" style="margin-top:20px; border-top:1px solid #333; padding-top:20px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <label style="margin:0;">Variações de Estoque</label>
+                                <button type="button" onclick="adicionarLinhaVariacao()" class="btn-add" style="margin:0; padding:5px 10px; font-size:0.8em; cursor:pointer;">
+                                    + Adicionar Opção
+                                </button>
+                            </div>
+                            
+                            <div id="container-variacoes"></div>
+                            
+                            <small style="color:#666; display:block; margin-top:5px;">
+                                Ex: Adicione cores e tamanhos. Se o produto for único, adicione apenas uma variação "Único".
+                            </small>
+                        </div>
+                        <button type="submit" class="btn-acao btn-salvar" style="margin-top:20px;">SALVAR PRODUTO</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <h3 style="color:#fff;">CATÁLOGO</h3>
+                    <div id="lista-produtos-admin">Carregando...</div>
+                </div>
+            </section>
+
+            <section id="revendedores" class="tab-content">
+                <div class="card">
+                    <h3 style="color:#fff; margin-top:0;">CADASTRAR REVENDEDOR</h3>
+                    <form id="form-revendedor">
+                        <div class="form-group">
+                            <label>Nome Completo</label>
+                            <input type="text" name="nome" required placeholder="Ex: João da Silva">
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <div class="form-group" style="flex:1;">
+                                <label>Código do Link (Slug)</label>
+                                <input type="text" name="slug" required placeholder="ex: joao (sem espaços)">
+                            </div>
+                            <div class="form-group" style="flex:1;">
+                                <label>WhatsApp</label>
+                                <input type="text" name="whatsapp" placeholder="Apenas números">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Chave PIX (Comissão)</label>
+                            <input type="text" name="chavePix">
+                        </div>
+                        <button type="submit" class="btn-acao btn-salvar">CRIAR PARCEIRO</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h3 style="color:#fff;">EQUIPE DE VENDAS</h3>
+                    <div class="table-container">
+                        <table class="vendas-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Link de Venda</th>
+                                    <th>Contato</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-revendedores">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="config" class="tab-content">
+                <div class="card">
+                    <h3 style="color:#fff;">PERSONALIZAR LOJA</h3>
+                    <form id="form-config">
+                        <div class="form-group"><label>Nome da Loja</label><input type="text" name="nomeLoja"></div>
+                        <div class="form-group"><label>Cor Destaque</label><input type="color" name="corDestaque" style="height:50px; cursor:pointer;"></div>
+                        <div class="form-group"><label>WhatsApp Principal</label><input type="text" name="whatsapp"></div>
+                        
+                        <hr style="border-color:#333; margin:20px 0;">
+                        
+                        <div class="form-group"><label>Fundo do Site</label><input type="file" name="fundoSite"></div>
+                        <div class="form-group"><label>Banner Topo</label><input type="file" name="fundoHeader"></div>
+                        <button type="submit" class="btn-acao btn-salvar">SALVAR ALTERAÇÕES</button>
+                    </form>
+                </div>
+                
+                <div class="card">
+                    <h3 style="color:#fff;">CUPONS DE DESCONTO</h3>
+                    <form id="form-cupom" style="display:flex; gap:10px;">
+                        <input type="text" id="cupom-codigo" name="codigo" placeholder="Código (Ex: VIP10)" required>
+                        <input type="number" id="cupom-valor" name="desconto" placeholder="%" style="width:80px;" required>
+                        <button type="submit" class="btn-add" style="width:auto; padding:0 20px;">ADD</button>
+                    </form>
+                    <div id="lista-cupons" style="margin-top:15px;"></div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+
+    <script src="/js/admin.js"></script>
+    <script>
+        // Função simples para mobile (já existia no seu, mantendo aqui caso o admin.js falhe no toggle)
+        function toggleAdminMenu() {
+            const sb = document.getElementById('sidebarAdmin');
+            const ov = document.getElementById('overlayAdmin');
+            if(sb) sb.classList.toggle('aberto');
+            if(ov) ov.classList.toggle('aberto');
+        }
+    </script>
+</body>
+</html>

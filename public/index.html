@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TROPA DO BRUXO | Loja Oficial</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <button class="menu-btn" onclick="toggleMenu()">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="sidebar" id="sidebar">
+        <button class="close-btn" onclick="toggleMenu()">&times;</button>
+        
+        <h3>CATEGORIAS</h3>
+        
+        <div class="menu-categorias-lateral" id="menu-categorias">
+            <button class="btn-categoria" onclick="toggleMenu()">🔥 Promoções</button>
+            <button class="btn-categoria" onclick="toggleMenu()">🍔 Lanches</button>
+            <button class="btn-categoria" onclick="toggleMenu()">🥤 Bebidas</button>
+            <button class="btn-categoria" onclick="toggleMenu()">🍟 Acompanhamentos</button>
+        </div>
+    </div>
+    
+    <div class="menu-overlay" onclick="toggleMenu()"></div>
+
+    <header>
+        <h1>TROPA DO BRUXO</h1>
+        <p>QUEBRANDO BARREIRAS, SUPERANDO LIMITES</p>
+    </header>
+
+    <div class="filtros-container">
+        <div class="search-box">
+            <i class="fas fa-search search-icon"></i> 
+            <input type="text" id="campo-busca" placeholder="Buscar produto...">
+        </div>
+    </div>
+
+    <main class="container" id="lista-produtos">
+    </main>
+
+    <div class="botao-flutuante" onclick="abrirCarrinho()">
+        <i class="fas fa-shopping-cart"></i>
+        <div id="contador-carrinho">0</div>
+    </div>
+
+    <div class="social-floats">
+        <a href="#" target="_blank" class="float-btn insta" id="link-insta">
+            <i class="fab fa-instagram"></i>
+        </a>
+        <a href="#" target="_blank" class="float-btn whats-promo" id="link-whats-float">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+    </div>
+
+    <div class="modal-overlay" id="modal-produto">
+        <div class="modal-content">
+            <button class="fechar-modal" onclick="fecharModal('modal-produto')">&times;</button>
+            <h2 id="modal-titulo"></h2>
+            <img id="modal-img" src="" alt="">
+            
+            <div id="modal-opcoes" class="lista-opcoes"></div>
+            
+            <div class="modal-footer">
+                <div class="qtd-control">
+                    <span style="color:#fff; margin-right:10px;">Qtd:</span>
+                    <input type="number" id="modal-qtd" value="1" min="1">
+                </div>
+                <div class="preco-final" id="modal-preco">R$ 0,00</div>
+                <button class="btn-whatsapp" onclick="adicionarAoCarrinhoModal()">
+                    ADICIONAR AO CARRINHO
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-carrinho">
+        <div class="modal-content">
+            <button class="fechar-modal" onclick="fecharModal('modal-carrinho')">&times;</button>
+            <h2>SEU CARRINHO</h2>
+            <div class="lista-carrinho-scroll" id="itens-carrinho"></div>
+            
+            <div class="modal-footer">
+                <input type="text" id="cupom-codigo" placeholder="Cupom de Desconto" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #444; background: #222; color: #fff;">
+                <button onclick="aplicarCupom()" style="width: 100%; margin-bottom: 15px; background: #444; color: #fff; border: none; padding: 8px; border-radius: 5px;">Aplicar Cupom</button>
+                
+                <div class="preco-final" id="total-carrinho">Total: R$ 0,00</div>
+                
+                <input type="text" id="nome-cliente" placeholder="Seu Nome Completo" style="width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ff5e00; background: #000; color: #fff;">
+                
+                <button class="btn-whatsapp" onclick="finalizarCompra()">
+                    <i class="fab fa-whatsapp"></i> FINALIZAR PEDIDO
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
