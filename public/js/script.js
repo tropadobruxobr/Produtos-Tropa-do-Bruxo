@@ -245,27 +245,50 @@ function filtrarProdutos() {
 // Helper para criar o card (Evita repetir código)
 function criarCardProduto(p) {
     let menorPreco = 0;
-    if (p.variacoes && p.variacoes.length > 0) {
+    let estoqueTotal = 0; // Variável para controlar o estoque
+    let temVariacoes = p.variacoes && p.variacoes.length > 0;
+
+    if (temVariacoes) {
+        // Pega o menor preço das variações
         const precos = p.variacoes.map(v => v.preco_venda || v.preco); 
         menorPreco = Math.min(...precos);
+
+        // Soma o estoque de todas as variações
+        estoqueTotal = p.variacoes.reduce((acc, v) => acc + (parseInt(v.estoque) || 0), 0);
     } else {
         menorPreco = p.preco || 0;
+        // Se não tiver variações, olha o estoque do produto. 
+        // Se for undefined (não definido), assumimos 999 (disponível), senão pegamos o valor.
+        estoqueTotal = p.estoque !== undefined ? parseInt(p.estoque) : 999;
     }
 
     const imgUrl = p.imagem ? p.imagem : 'https://via.placeholder.com/150';
+    const esgotado = estoqueTotal <= 0; // Verifica se está esgotado
 
     const div = document.createElement('div');
     div.className = 'card product-card'; 
+    
+    // Evita abrir o modal se clicar especificamente no aviso de esgotado, mas permite clicar na imagem
     div.onclick = (e) => { 
-        if(e.target.tagName !== 'BUTTON') abrirModal(p._id || p.id); 
+        if(e.target.tagName !== 'BUTTON' && !e.target.classList.contains('btn-esgotado')) {
+            abrirModal(p._id || p.id); 
+        }
     };
+    
+    // Define o HTML do botão ou do aviso de esgotado
+    let botaoAcao;
+    if (esgotado) {
+        botaoAcao = `<div class="btn-esgotado" style="color: red; font-weight: 900; border: 1px solid red; padding: 6px; border-radius: 4px; text-align: center; margin-top: 5px; cursor: default;">ESGOTADO</div>`;
+    } else {
+        botaoAcao = `<button onclick="abrirModal('${p._id || p.id}')">COMPRAR</button>`;
+    }
     
     div.innerHTML = `
         <img src="${imgUrl}" alt="${p.nome}" loading="lazy">
         <div class="card-info">
             <h3>${p.nome}</h3>
             <div class="preco">${formatarMoeda(menorPreco)}</div>
-            <button onclick="abrirModal('${p._id || p.id}')">COMPRAR</button>
+            ${botaoAcao}
         </div>
     `;
     return div;
