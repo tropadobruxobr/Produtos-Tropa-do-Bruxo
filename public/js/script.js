@@ -7,6 +7,33 @@ let descontoAtual = 0;
 let categoriaAtual = 'todos'; 
 let configLoja = {}; 
 
+/* --- INJEÇÃO DE ESTILOS (PARA ORGANIZAÇÃO POR SEÇÃO) --- */
+const styleSecoes = document.createElement('style');
+styleSecoes.innerHTML = `
+    .titulo-secao {
+        width: 100%;
+        color: var(--neon-orange);
+        font-family: 'Russo One', sans-serif;
+        font-size: 1.4rem;
+        margin: 40px 0 15px 0;
+        border-bottom: 2px solid #333;
+        padding-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .sub-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    @media (min-width: 768px) {
+        .sub-grid { grid-template-columns: repeat(5, 1fr); gap: 20px; }
+    }
+`;
+document.head.appendChild(styleSecoes);
+
 /* --- UTILITÁRIOS (Formatação de Dinheiro) --- */
 const formatarMoeda = (valor) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
@@ -18,28 +45,23 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarProdutos();  // 2. Busca e exibe os produtos
     carregarCarrinhoLocal();
     atualizarContador();
-    verificarRevendedor(); // 3. NOVA FUNÇÃO: Checa se tem revendedor na URL
+    verificarRevendedor(); // 3. Checa se tem revendedor na URL
     
     // Configura a busca dinâmica
-    const buscaInput = document.getElementById('campo-busca') || document.getElementById('searchInput'); // Suporta ambos os nomes
+    const buscaInput = document.getElementById('campo-busca') || document.getElementById('searchInput'); 
     if(buscaInput) {
         buscaInput.addEventListener('input', filtrarProdutos);
     }
 });
 
-/* --- SISTEMA DE REVENDEDORES (CORRIGIDO E SIMPLIFICADO) --- */
+/* --- SISTEMA DE REVENDEDORES --- */
 function verificarRevendedor() {
-    // 🛡️ MUDANÇA: Captura imediata. Se tem ref na URL, salva no navegador.
-    // Isso garante que o revendedor seja pego mesmo se a internet oscilar.
     const urlParams = new URLSearchParams(window.location.search);
     const ref = urlParams.get('ref'); 
 
     if (ref) {
         localStorage.setItem('catalogo_ref', ref);
         console.log(`Revendedor capturado: ${ref}`);
-        
-        // (Opcional) Limpa a URL para ficar mais bonita, mas mantendo o ref salvo
-        // window.history.replaceState({}, document.title, "/");
     }
 }
 
@@ -52,38 +74,22 @@ async function carregarTema() {
         const tema = await response.json();
         configLoja = tema; 
 
-        // 1. Aplica a Cor Neon
-        if (tema.corDestaque) {
-            document.documentElement.style.setProperty('--neon-orange', tema.corDestaque);
-        }
-
-        // 2. Aplica o Fundo do Site
-        if (tema.fundoSite) {
-            document.body.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.92), rgba(0,0,0,0.98)), url('../uploads/${tema.fundoSite}')`;
-        }
-
-        // 3. Aplica o Fundo do Header
+        if (tema.corDestaque) document.documentElement.style.setProperty('--neon-orange', tema.corDestaque);
+        if (tema.fundoSite) document.body.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.92), rgba(0,0,0,0.98)), url('../uploads/${tema.fundoSite}')`;
         if (tema.fundoHeader) {
             const header = document.querySelector('header');
-            if (header) {
-                header.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('../uploads/${tema.fundoHeader}')`;
-            }
+            if (header) header.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('../uploads/${tema.fundoHeader}')`;
         }
-
-        // 4. Atualiza o Título
         if (tema.nomeLoja) {
             const titulo = document.querySelector('header h1');
             if (titulo) titulo.innerText = tema.nomeLoja;
             document.title = tema.nomeLoja + " | Loja Oficial";
         }
-
-        // 5. Atualiza Redes Sociais
         if (tema.instagramLink) {
             const btnInsta = document.getElementById('link-insta');
             if(btnInsta) btnInsta.href = tema.instagramLink;
         }
 
-        // Configura o botão flutuante do WhatsApp
         const btnWhats = document.getElementById('link-whats-float');
         if (btnWhats) {
             const numeroFloat = tema.whatsappFlutuante || tema.whatsapp || tema.whatsappPedidos;
@@ -115,6 +121,9 @@ async function carregarProdutos() {
         const res = await fetch('/api/produtos');
         produtosGlobais = await res.json();
         
+        // Ordena produtos de A-Z (Geral)
+        produtosGlobais.sort((a, b) => a.nome.localeCompare(b.nome));
+
         renderizarCategorias(); 
         filtrarProdutos();      
     } catch (erro) {
@@ -128,7 +137,11 @@ function renderizarCategorias() {
     const container = document.getElementById('menu-categorias');
     if(!container) return;
 
-    const categorias = ['todos', ...new Set(produtosGlobais.map(p => p.categoria).filter(c => c))];
+    // Extrai categorias únicas e ordena A-Z
+    const categoriasUnicas = [...new Set(produtosGlobais.map(p => p.categoria).filter(c => c))];
+    categoriasUnicas.sort((a, b) => a.localeCompare(b));
+
+    const categorias = ['todos', ...categoriasUnicas];
 
     container.innerHTML = '';
 
@@ -148,6 +161,7 @@ function renderizarCategorias() {
     });
 }
 
+// 🔥 FUNÇÃO PRINCIPAL ALTERADA: AGORA CRIA SEÇÕES
 function filtrarProdutos() {
     const buscaInput = document.getElementById('campo-busca') || document.getElementById('searchInput');
     const termo = buscaInput ? buscaInput.value.toLowerCase() : '';
@@ -157,49 +171,108 @@ function filtrarProdutos() {
     
     container.innerHTML = '';
 
-    const filtrados = produtosGlobais.filter(produto => {
-        const matchCategoria = categoriaAtual === 'todos' || produto.categoria === categoriaAtual;
+    // 1. Filtro global (Busca + Ativo)
+    let produtosFiltrados = produtosGlobais.filter(produto => {
         const matchNome = produto.nome.toLowerCase().includes(termo);
         const isAtivo = produto.ativo !== false; 
-        return matchCategoria && matchNome && isAtivo;
+        return matchNome && isAtivo;
     });
 
-    if (filtrados.length === 0) {
-        container.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding:20px; color:#888;">Nenhum produto encontrado.</p>';
+    if (produtosFiltrados.length === 0) {
+        container.style.display = 'block';
+        container.innerHTML = '<p style="text-align:center; padding:20px; color:#888;">Nenhum produto encontrado.</p>';
         return;
     }
 
-    filtrados.forEach(p => {
-        // Lógica de preço: pega o menor da variação ou o preço base
-        let menorPreco = 0;
-        if (p.variacoes && p.variacoes.length > 0) {
-            const precos = p.variacoes.map(v => v.preco_venda || v.preco); // Suporta 'preco_venda' ou 'preco'
-            menorPreco = Math.min(...precos);
-        } else {
-            menorPreco = p.preco || 0;
+    // 2. LÓGICA DE EXIBIÇÃO
+    if (categoriaAtual === 'todos') {
+        // --- MODO SEÇÕES (CATEGORIAS SEPARADAS) ---
+        container.style.display = 'block'; // Permite empilhar os blocos
+
+        // Pega categorias presentes nos produtos filtrados
+        const categoriasPresentes = [...new Set(produtosFiltrados.map(p => p.categoria).filter(c => c))];
+        
+        // Ordena Categorias A-Z
+        categoriasPresentes.sort((a, b) => a.localeCompare(b));
+
+        // Para cada categoria, cria um bloco
+        categoriasPresentes.forEach(cat => {
+            // Filtra produtos dessa categoria e ordena A-Z
+            const produtosDaCategoria = produtosFiltrados.filter(p => p.categoria === cat);
+            produtosDaCategoria.sort((a, b) => a.nome.localeCompare(b.nome));
+
+            if (produtosDaCategoria.length > 0) {
+                // Título da Seção
+                const titulo = document.createElement('h2');
+                titulo.className = 'titulo-secao';
+                titulo.innerText = cat;
+                container.appendChild(titulo);
+
+                // Grid da Seção (Usa a classe injetada lá em cima)
+                const gridDiv = document.createElement('div');
+                gridDiv.className = 'sub-grid';
+                
+                // Renderiza os cards dentro do grid da seção
+                produtosDaCategoria.forEach(p => {
+                    const card = criarCardProduto(p);
+                    gridDiv.appendChild(card);
+                });
+
+                container.appendChild(gridDiv);
+            }
+        });
+
+    } else {
+        // --- MODO CATEGORIA ÚNICA (PADRÃO) ---
+        container.style.display = 'grid'; // Volta ao Grid original do CSS
+        
+        const produtosDaCategoria = produtosFiltrados.filter(p => p.categoria === categoriaAtual);
+        produtosDaCategoria.sort((a, b) => a.nome.localeCompare(b.nome));
+
+        if (produtosDaCategoria.length === 0) {
+            container.style.display = 'block';
+            container.innerHTML = '<p style="text-align:center; padding:20px; color:#888;">Nenhum produto nesta categoria.</p>';
+            return;
         }
 
-        const imgUrl = p.imagem ? p.imagem : 'https://via.placeholder.com/150';
+        produtosDaCategoria.forEach(p => {
+            const card = criarCardProduto(p);
+            container.appendChild(card);
+        });
+    }
+}
 
-        const div = document.createElement('div');
-        div.className = 'card product-card'; // Adicionado classes extras para compatibilidade CSS
-        div.onclick = (e) => { if(e.target.tagName !== 'BUTTON') abrirModal(p.id); };
-        
-        div.innerHTML = `
-            <img src="${imgUrl}" alt="${p.nome}" loading="lazy">
-            <div class="card-info">
-                <h3>${p.nome}</h3>
-                <div class="preco">${formatarMoeda(menorPreco)}</div>
-                <button onclick="abrirModal('${p._id || p.id}')">COMPRAR</button>
-            </div>
-        `;
-        container.appendChild(div);
-    });
+// Helper para criar o card (Evita repetir código)
+function criarCardProduto(p) {
+    let menorPreco = 0;
+    if (p.variacoes && p.variacoes.length > 0) {
+        const precos = p.variacoes.map(v => v.preco_venda || v.preco); 
+        menorPreco = Math.min(...precos);
+    } else {
+        menorPreco = p.preco || 0;
+    }
+
+    const imgUrl = p.imagem ? p.imagem : 'https://via.placeholder.com/150';
+
+    const div = document.createElement('div');
+    div.className = 'card product-card'; 
+    div.onclick = (e) => { 
+        if(e.target.tagName !== 'BUTTON') abrirModal(p._id || p.id); 
+    };
+    
+    div.innerHTML = `
+        <img src="${imgUrl}" alt="${p.nome}" loading="lazy">
+        <div class="card-info">
+            <h3>${p.nome}</h3>
+            <div class="preco">${formatarMoeda(menorPreco)}</div>
+            <button onclick="abrirModal('${p._id || p.id}')">COMPRAR</button>
+        </div>
+    `;
+    return div;
 }
 
 /* --- MODAL DE DETALHES --- */
 function abrirModal(id) {
-    // Tenta encontrar pelo ID numérico ou String (Mongo ID)
     produtoSelecionado = produtosGlobais.find(p => p.id == id || p._id == id);
     if(!produtoSelecionado) return;
 
@@ -207,6 +280,10 @@ function abrirModal(id) {
     document.getElementById('modal-img').src = produtoSelecionado.imagem || 'https://via.placeholder.com/150';
     document.getElementById('modal-qtd').value = 1;
     
+    // Reseta aviso de esgotado
+    const overlay = document.getElementById('overlay-esgotado');
+    if(overlay) overlay.style.display = 'none';
+
     // Ordena variações
     const variacoesOrdenadas = produtoSelecionado.variacoes ? [...produtoSelecionado.variacoes].sort((a, b) => {
         const marcaA = a.marca || a.tamanho || '';
@@ -218,14 +295,18 @@ function abrirModal(id) {
     lista.innerHTML = '';
     
     if (variacoesOrdenadas.length === 0) {
-        // Caso produto simples sem variação
+        // Produto único
         variacaoSelecionada = { 
             marca: 'Único', 
             preco_venda: produtoSelecionado.preco || 0, 
-            estoque: produtoSelecionado.estoque || 999 
+            estoque: produtoSelecionado.estoque !== undefined ? produtoSelecionado.estoque : 999 
         };
         lista.innerHTML = '<p style="color:#ccc">Produto único</p>';
         document.getElementById('modal-preco').innerText = formatarMoeda(produtoSelecionado.preco || 0);
+        
+        // Verifica estoque visual
+        verificarEstoqueVisual(variacaoSelecionada.estoque);
+
     } else {
         // Com variações
         selVar(variacoesOrdenadas[0], 0);
@@ -248,11 +329,10 @@ function abrirModal(id) {
                 ${semEstoque ? '<small style="color:red; font-size:0.7em">(Esgotado)</small>' : ''}
             `;
 
-            if (!semEstoque) {
-                div.onclick = () => selVar(v, idx);
-            } else {
-                div.style.opacity = '0.5';
-                div.style.cursor = 'not-allowed';
+            div.onclick = () => selVar(v, idx);
+
+            if (semEstoque) {
+                div.style.opacity = '0.6';
             }
             
             lista.appendChild(div);
@@ -266,6 +346,8 @@ function abrirModal(id) {
 function selVar(variacao, idx) {
     variacaoSelecionada = variacao;
     const preco = variacao.preco_venda || variacao.preco || 0;
+    const estoque = variacao.estoque !== undefined ? variacao.estoque : 99;
+
     document.getElementById('modal-preco').innerText = formatarMoeda(preco);
     
     const todos = document.querySelectorAll('.opcao-item');
@@ -280,6 +362,29 @@ function selVar(variacao, idx) {
         atual.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--neon-orange') || '#ff6600';
         atual.style.color = 'white';
         atual.style.background = '#333';
+    }
+
+    verificarEstoqueVisual(estoque);
+}
+
+function verificarEstoqueVisual(qtd) {
+    const overlay = document.getElementById('overlay-esgotado');
+    const btnAdd = document.querySelector('.btn-whatsapp'); 
+    
+    if (qtd <= 0) {
+        if(overlay) overlay.style.display = 'block'; 
+        if(btnAdd) {
+            btnAdd.style.opacity = '0.5';
+            btnAdd.style.pointerEvents = 'none';
+            btnAdd.innerText = "INDISPONÍVEL";
+        }
+    } else {
+        if(overlay) overlay.style.display = 'none';
+        if(btnAdd) {
+            btnAdd.style.opacity = '1';
+            btnAdd.style.pointerEvents = 'auto';
+            btnAdd.innerText = "ADICIONAR AO CARRINHO";
+        }
     }
 }
 
@@ -296,7 +401,6 @@ function adicionarAoCarrinhoModal() {
     const preco = variacaoSelecionada.preco_venda || variacaoSelecionada.preco || 0;
     const nomeVar = variacaoSelecionada.marca || variacaoSelecionada.tamanho || 'Único';
 
-    // Verifica se já existe no carrinho para somar
     const existente = carrinho.find(item => item.produto === produtoSelecionado.nome && item.marca === nomeVar);
 
     if(existente) {
@@ -403,7 +507,7 @@ async function aplicarCupom() {
     }
 }
 
-/* --- FINALIZAR COMPRA (ATUALIZADO COM REVENDEDOR) --- */
+/* --- FINALIZAR COMPRA --- */
 async function finalizarCompra() {
     if(carrinho.length === 0) return alert("Seu carrinho está vazio!");
     
@@ -416,24 +520,20 @@ async function finalizarCompra() {
         return;
     }
 
-    // Cálculos
     let totalBruto = carrinho.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
     let totalFinal = totalBruto * (1 - descontoAtual/100);
 
-    // Recupera Revendedor Salvo (Se houver)
     const representante = localStorage.getItem('catalogo_ref');
 
-    // Preparar dados para o Servidor (Conforme novo Schema)
     const pedidoParaSalvar = {
-        cliente: { nome: nome }, // Ajustado para bater com o Schema
+        cliente: { nome: nome },
         produtos: carrinho, 
         total: totalFinal,
-        representante: representante, // <--- CAMPO NOVO IMPORTANTE
+        representante: representante,
         data: new Date().toISOString()
     };
 
     try {
-        // 1. Envia para o servidor e ESPERA a resposta
         const response = await fetch('/api/vendas', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -443,7 +543,6 @@ async function finalizarCompra() {
         const resultado = await response.json();
 
         if (resultado.success || resultado.message) {
-            // 2. Se salvou, monta a mensagem do WhatsApp
             let msg = `*NOVO PEDIDO - ${configLoja.nomeLoja || 'LOJA'}* 🛒\n\n`;
             msg += `*Cliente:* ${nome}\n`;
             if(resultado.id || resultado.pedidoId) msg += `*Pedido #:* ${resultado.id || resultado.pedidoId}\n`;
@@ -471,10 +570,8 @@ async function finalizarCompra() {
 
             msg += `Aguardo instruções de pagamento!`;
 
-            // --- LÓGICA DE TELEFONE (REVENDEDOR OU LOJA) ---
             let telefoneDestino = configLoja.whatsapp || configLoja.whatsappPedidos || "5511999999999";
 
-            // Se tiver um representante, tenta buscar o zap dele
             if (representante) {
                 try {
                     const resRep = await fetch(`/api/revendedor/${representante}`);
@@ -482,7 +579,6 @@ async function finalizarCompra() {
                     
                     if (dadosRep.valido && dadosRep.whatsapp) {
                         telefoneDestino = dadosRep.whatsapp;
-                        // console.log("Direcionando para Revendedor:", dadosRep.nome);
                     }
                 } catch (e) {
                     console.log("Erro ao buscar zap do revendedor, usando da loja.");
@@ -490,9 +586,7 @@ async function finalizarCompra() {
             }
 
             const tel = telefoneDestino.replace(/\D/g, '');
-            // -----------------------------------------------
 
-            // Limpa Carrinho
             carrinho = [];
             descontoAtual = 0;
             salvarCarrinho();
@@ -500,7 +594,6 @@ async function finalizarCompra() {
             fecharModal('modal-carrinho');
             if(nomeInput) nomeInput.value = '';
 
-            // Redireciona para o WhatsApp
             window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
         } else {
             alert("Erro ao salvar pedido no sistema. Tente novamente.");
@@ -533,7 +626,6 @@ function atualizarContador() {
     if(contador) contador.innerText = qtdTotal; 
 }
 
-// Fecha modal ao clicar fora
 window.onclick = function(event) {
     const modals = ['modal-produto', 'modal-carrinho'];
     modals.forEach(id => {

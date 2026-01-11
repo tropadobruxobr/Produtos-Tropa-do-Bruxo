@@ -322,7 +322,8 @@ app.delete('/api/revendedores/:id', isAuthenticated, async (req, res) => {
 
 app.get('/api/produtos', async (req, res) => {
     try {
-        const produtos = await Produto.find().sort({ dataCriacao: -1 });
+        // MUDANÇA AQUI: Ordenação alfabética (A-Z) -> { nome: 1 }
+        const produtos = await Produto.find().sort({ nome: 1 });
         res.json(produtos);
     } catch (e) {
         res.status(500).json({ error: 'Erro ao buscar produtos' });
