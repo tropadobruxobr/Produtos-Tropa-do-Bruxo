@@ -453,21 +453,78 @@ async function carregarListaAdmin() {
         const produtos = await res.json();
         window.todosProdutos = produtos; 
 
-        container.innerHTML = produtos.map(p => `
-            <div style="background:#1a1a1a; padding:10px; margin-bottom:5px; border-radius:5px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <img src="${p.imagem || ''}" style="width:40px; height:40px; border-radius:4px; object-fit:cover; background:#333;">
-                    <div>
-                        <div style="font-weight:bold; color:white;">${p.nome}</div>
-                        <div style="font-size:0.8em; color:#888;">${p.variacoes ? p.variacoes.length + ' opções' : 'Único'}</div>
+        // Se não tiver produtos
+        if (produtos.length === 0) {
+            container.innerHTML = '<p style="color:#888; text-align:center; padding:20px;">Nenhum produto cadastrado.</p>';
+            return;
+        }
+
+        // 1. Agrupar produtos por categoria
+        const produtosPorCategoria = {};
+        
+        produtos.forEach(p => {
+            // Se não tiver categoria, define como "Geral" ou "Sem Categoria"
+            const cat = p.categoria && p.categoria.trim() !== "" ? p.categoria : 'Geral'; 
+            
+            if (!produtosPorCategoria[cat]) {
+                produtosPorCategoria[cat] = [];
+            }
+            produtosPorCategoria[cat].push(p);
+        });
+
+        // 2. Ordenar as Categorias (A-Z)
+        const categoriasOrdenadas = Object.keys(produtosPorCategoria).sort((a, b) => a.localeCompare(b));
+
+        // 3. Renderizar HTML
+        container.innerHTML = '';
+
+        categoriasOrdenadas.forEach(cat => {
+            // Título da Categoria
+            container.innerHTML += `
+                <div style="
+                    background: #252525; 
+                    color: #ff5e00; 
+                    padding: 8px 15px; 
+                    margin-top: 20px; 
+                    margin-bottom: 10px; 
+                    border-left: 4px solid #ff5e00; 
+                    border-radius: 4px;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    font-size: 0.9rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                ">
+                    <i class="fas fa-folder-open"></i> ${cat}
+                </div>
+            `;
+
+            // Ordenar produtos DENTRO da categoria (A-Z pelo nome)
+            const produtosDaCat = produtosPorCategoria[cat].sort((a, b) => a.nome.localeCompare(b.nome));
+
+            produtosDaCat.forEach(p => {
+                container.innerHTML += `
+                    <div style="background:#1a1a1a; padding:10px; margin-bottom:5px; margin-left:10px; border-radius:5px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center; border-left: 1px solid #444;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <img src="${p.imagem || ''}" style="width:40px; height:40px; border-radius:4px; object-fit:cover; background:#333;">
+                            <div>
+                                <div style="font-weight:bold; color:white;">${p.nome}</div>
+                                <div style="font-size:0.8em; color:#888;">
+                                    ${p.variacoes ? p.variacoes.length + ' opções' : 'Único'} 
+                                    ${p.emBreve ? '<span style="color:#00ccff; margin-left:5px;">(Em Breve)</span>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <button onclick="prepararEdicao('${p._id || p.id}')" style="background:none; border:1px solid #ffcc00; color:#ffcc00; border-radius:4px; cursor:pointer; margin-right:5px; padding:5px 8px;" title="Editar">✏️</button>
+                            <button onclick="deletarProduto('${p._id || p.id}')" style="background:none; border:1px solid #ff4444; color:#ff4444; border-radius:4px; cursor:pointer; padding:5px 8px;" title="Excluir">🗑️</button>
+                        </div>
                     </div>
-                </div>
-                <div>
-                    <button onclick="prepararEdicao('${p._id || p.id}')" style="background:none; border:1px solid #ffcc00; color:#ffcc00; border-radius:4px; cursor:pointer; margin-right:5px;">✏️</button>
-                    <button onclick="deletarProduto('${p._id || p.id}')" style="background:none; border:1px solid #ff4444; color:#ff4444; border-radius:4px; cursor:pointer;">🗑️</button>
-                </div>
-            </div>
-        `).join('');
+                `;
+            });
+        });
+
     } catch(e) { console.error("Erro lista produtos", e); }
 }
 
@@ -483,16 +540,29 @@ async function carregarVendas() {
     try {
         const res = await fetch(`${API_URL}/api/vendas`);
         const vendas = await res.json();
-        todasAsVendasCache = vendas;
+        todasAsVendasCache = vendas; // Atualiza o cache global
 
         const renderRows = (lista) => lista.map(v => {
             const badgeClass = v.status === 'Aprovado' ? 'badge-aprovado' : (v.status === 'Cancelado' ? 'badge-cancelado' : 'badge-pendente');
             const statusColor = v.status === 'Aprovado' ? '#00cc66' : (v.status === 'Pendente' ? '#ffaa00' : '#ff4444');
             
-            const acoes = v.status === 'Pendente' ? `
-                <button onclick="confirmarVenda('${v._id || v.id_pedido}')" class="btn-action btn-approve" style="background:#00cc66; color:white; border:none; padding:5px 10px; cursor:pointer; margin-right:5px; border-radius:4px;">✔</button>
-                <button onclick="cancelarVenda('${v._id || v.id_pedido}')" class="btn-action btn-cancel" style="background:#ff4444; color:white; border:none; padding:5px 10px; cursor:pointer; border-radius:4px;">✖</button>
-            ` : '-';
+            // Botões de Ação
+            let acoes = '';
+
+            // Se for Pendente, mostra Aprovar/Recusar
+            if (v.status === 'Pendente') {
+                acoes += `
+                <button onclick="confirmarVenda('${v._id || v.id_pedido}')" title="Aprovar" style="background:none; border:1px solid #00cc66; color:#00cc66; padding:5px 8px; cursor:pointer; margin-right:5px; border-radius:4px;">✔</button>
+                <button onclick="cancelarVenda('${v._id || v.id_pedido}')" title="Recusar" style="background:none; border:1px solid #ff4444; color:#ff4444; padding:5px 8px; cursor:pointer; border-radius:4px; margin-right:5px;">✖</button>
+                `;
+            }
+
+            // Botão de EXCLUIR (Lixeira) - Aparece para TODOS os pedidos
+            acoes += `
+                <button onclick="deletarPedido('${v._id || v.id_pedido}')" title="Excluir do Histórico" style="background:none; border:none; color:#666; cursor:pointer; font-size:1.1em; vertical-align:middle;">
+                    🗑️
+                </button>
+            `;
 
             return `<tr>
                 <td style="color:#aaa;">#${String(v.id_pedido || v._id).slice(-4)}</td>
@@ -500,54 +570,69 @@ async function carregarVendas() {
                 <td style="color:cyan">${v.representante ? v.representante : '-'}</td>
                 <td style="font-weight:bold;">R$ ${parseFloat(v.total).toFixed(2)}</td>
                 <td><span class="badge ${badgeClass}" style="padding:2px 6px; border-radius:4px; background:${statusColor}; color:${v.status==='Pendente'?'black':'white'}">${v.status}</span></td>
-                <td>${acoes}</td>
+                <td style="white-space:nowrap;">${acoes}</td>
             </tr>`;
         }).join('');
 
-        if (tbody) tbody.innerHTML = vendas.length ? renderRows(vendas) : '<tr><td colspan="6">Sem pedidos.</td></tr>';
-        else if (divLista) divLista.innerHTML = vendas.length ? renderRows(vendas) : 'Sem pedidos.';
-
+        if (tbody) tbody.innerHTML = vendas.length ? renderRows(vendas) : '<tr><td colspan="6" style="text-align:center; padding:20px;">Sem pedidos registrados.</td></tr>';
+        
     } catch (e) { console.error("Erro vendas", e); }
 }
 
-window.confirmarVenda = function(id) {
+// --- NOVA FUNÇÃO PARA EXCLUIR MANUALMENTE ---
+window.deletarPedido = function(id) {
     swalDark.fire({
-        title: 'Aprovar Pedido?',
-        text: "O estoque será baixado automaticamente.",
-        icon: 'info',
+        title: 'Tem certeza?',
+        text: "Isso removerá este pedido do histórico permanentemente.",
+        icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Sim, aprovar!',
-        confirmButtonColor: '#00cc66'
+        confirmButtonText: 'Sim, apagar',
+        confirmButtonColor: '#d33',
+        cancelButtonText: 'Cancelar'
     }).then(async (result) => {
-        if(result.isConfirmed) {
+        if (result.isConfirmed) {
             try {
-                const res = await fetch(`${API_URL}/api/venda/${id}/confirmar`, { method: 'POST' });
+                const res = await fetch(`${API_URL}/api/venda/${id}`, { method: 'DELETE' });
                 const data = await res.json();
-                if(res.ok) {
-                    Toast.fire({ icon: 'success', title: 'Pedido Aprovado!' });
+                
+                if (data.success) {
+                    Toast.fire({ icon: 'success', title: 'Pedido removido.' });
                     carregarVendas();
                     carregarDashboard();
                 } else {
-                    swalDark.fire('Erro', data.message, 'error');
+                    swalDark.fire('Erro', 'Não foi possível excluir.', 'error');
                 }
-            } catch(e) { swalDark.fire('Erro', 'Conexão falhou', 'error'); }
+            } catch (e) {
+                swalDark.fire('Erro', 'Erro de conexão.', 'error');
+            }
         }
     });
 };
 
 window.cancelarVenda = function(id) {
     swalDark.fire({
-        title: 'Recusar Pedido?',
-        text: "O status mudará para Cancelado.",
+        title: 'Recusar e Excluir?',
+        text: "Este pedido será APAGADO permanentemente do banco de dados.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Sim, recusar',
-        confirmButtonColor: '#ff4444'
+        confirmButtonText: 'Sim, excluir',
+        confirmButtonColor: '#ff4444',
+        cancelButtonText: 'Cancelar'
     }).then(async (result) => {
         if (result.isConfirmed) {
-            await fetch(`${API_URL}/api/venda/${id}/cancelar`, { method: 'POST' });
-            Toast.fire({ icon: 'info', title: 'Pedido cancelado.' });
-            carregarVendas();
+            try {
+                const res = await fetch(`${API_URL}/api/venda/${id}/cancelar`, { method: 'POST' });
+                
+                if (res.ok) {
+                    Toast.fire({ icon: 'success', title: 'Pedido excluído!' });
+                    carregarVendas(); // Recarrega a lista para sumir com o pedido
+                    carregarDashboard(); // Atualiza os números do dashboard
+                } else {
+                    swalDark.fire('Erro', 'Não foi possível excluir.', 'error');
+                }
+            } catch (e) {
+                swalDark.fire('Erro', 'Erro de conexão.', 'error');
+            }
         }
     });
 };

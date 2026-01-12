@@ -41,6 +41,18 @@ const formatarMoeda = (valor) => {
 
 /* --- INICIALIZAÇÃO (Ao carregar a página) --- */
 document.addEventListener('DOMContentLoaded', () => {
+    // Verificação de Revendedor (CORREÇÃO)
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get('ref');
+
+    if (ref) {
+        // Se tem ref na URL, salva no navegador
+        localStorage.setItem('catalogo_ref', ref);
+    } else {
+        // [NOVO] Se entrou pelo link normal (sem ref), APAGA o revendedor salvo
+        localStorage.removeItem('catalogo_ref');
+    }
+    
     carregarTema();      // 1. Aplica as cores, imagens e LINKS
     carregarProdutos();  // 2. Busca e exibe os produtos
     carregarCarrinhoLocal();
@@ -643,7 +655,7 @@ async function finalizarCompra() {
             setTimeout(() => {
                 window.location.href = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
             }, 500);
-            
+
         } else {
             alert("Erro ao salvar pedido no sistema. Tente novamente.");
         }

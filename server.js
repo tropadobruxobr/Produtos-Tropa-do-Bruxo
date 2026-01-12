@@ -533,16 +533,39 @@ app.post('/api/venda/:id/cancelar', isAuthenticated, async (req, res) => {
         let filtro = { id_pedido: req.params.id };
         if (mongoose.Types.ObjectId.isValid(req.params.id)) filtro = { _id: req.params.id };
 
-        const venda = await Venda.findOne(filtro);
-        if (!venda) return res.status(404).json({ message: 'Venda não encontrada' });
+        // ALTERAÇÃO: Usamos findOneAndDelete para remover do banco imediatamente
+        const vendaRemovida = await Venda.findOneAndDelete(filtro);
 
-        venda.status = 'Cancelado';
-        venda.dataCancelamento = new Date(); 
-        
-        await venda.save();
-        res.json({ message: 'Venda cancelada!' });
+        if (!vendaRemovida) {
+            return res.status(404).json({ message: 'Venda não encontrada' });
+        }
+
+        res.json({ message: 'Pedido excluído permanentemente!' });
     } catch (e) {
-        res.status(500).json({ error: 'Erro ao cancelar' });
+        console.error(e);
+        res.status(500).json({ error: 'Erro ao excluir pedido' });
+    }
+    
+});
+// Rota para EXCLUIR um pedido individualmente (Qualquer status)
+app.delete('/api/venda/:id', isAuthenticated, async (req, res) => {
+    try {
+        let filtro = { id_pedido: req.params.id };
+        
+        // Verifica se é ID do Mongo ou ID numérico
+        if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+            filtro = { _id: req.params.id };
+        }
+
+        const deletado = await Venda.findOneAndDelete(filtro);
+
+        if (deletado) {
+            res.json({ success: true, message: 'Pedido excluído.' });
+        } else {
+            res.status(404).json({ error: 'Pedido não encontrado.' });
+        }
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao excluir.' });
     }
 });
 // 3. NOVA ROTA PARA LIMPAR PEDIDOS (Adicione onde estão as rotas de venda)
