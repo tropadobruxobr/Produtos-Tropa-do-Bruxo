@@ -161,7 +161,7 @@ function renderizarCategorias() {
     });
 }
 
-// 🔥 FUNÇÃO PRINCIPAL ALTERADA: AGORA CRIA SEÇÕES
+// 🔥 FUNÇÃO PRINCIPAL: CRIA SEÇÕES
 function filtrarProdutos() {
     const buscaInput = document.getElementById('campo-busca') || document.getElementById('searchInput');
     const termo = buscaInput ? buscaInput.value.toLowerCase() : '';
@@ -297,7 +297,6 @@ function criarCardProduto(p) {
     // Evita abrir o modal se clicar especificamente no aviso de esgotado, mas permite clicar na imagem
     div.onclick = (e) => { 
         // Se clicar no botão ou for em breve/esgotado, não faz nada
-        // ATENÇÃO: !p.emBreve impede o clique se for em breve
         if(e.target.tagName !== 'BUTTON' && !e.target.classList.contains('btn-esgotado') && !p.emBreve) {
             abrirModal(p._id || p.id); 
         }
@@ -446,6 +445,7 @@ function adicionarAoCarrinhoModal() {
 
     const existente = carrinho.find(item => item.produto === produtoSelecionado.nome && item.marca === nomeVar);
 
+    // [MODIFICAÇÃO] Agora salvamos também a categoria no objeto do carrinho
     if(existente) {
         if(existente.qtd + qtd > estoque) {
             return alert("Estoque limite atingido no carrinho.");
@@ -455,6 +455,7 @@ function adicionarAoCarrinhoModal() {
     } else {
         carrinho.push({
             produto: produtoSelecionado.nome,
+            categoria: produtoSelecionado.categoria || 'Geral', // <-- ADICIONADO AQUI
             marca: nomeVar,
             preco: preco,
             qtd: qtd,
@@ -593,6 +594,8 @@ async function finalizarCompra() {
             
             carrinho.forEach(item => {
                 msg += `📦 ${item.qtd}x ${item.produto}\n`;
+                // [MODIFICAÇÃO] Adicionando a Categoria (Marca) na mensagem
+                msg += `   📂 Categoria: ${item.categoria || 'Geral'}\n`;
                 msg += `   Opção: ${item.marca}\n`;
                 msg += `   Valor: ${formatarMoeda(item.preco * item.qtd)}\n`;
             });
