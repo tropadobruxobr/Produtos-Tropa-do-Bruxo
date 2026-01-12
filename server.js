@@ -54,6 +54,7 @@ const ProdutoSchema = new mongoose.Schema({
     imagem: String,
     variacoes: [Object], 
     ativo: { type: Boolean, default: true },
+    emBreve: { type: Boolean, default: false },
     dataCriacao: { type: Date, default: Date.now }
 });
 const Produto = mongoose.model('Produto', ProdutoSchema);
@@ -219,6 +220,7 @@ app.get('/api/dashboard', async (req, res) => {
         const ticketMedio = totalVendasAprovadas > 0 ? (valorTotalAprovado / totalVendasAprovadas) : 0;
 
         // Estoque Baixo
+        // Estoque Baixo
         const estoqueBaixo = [];
         produtos.forEach(p => {
             if (p.variacoes && Array.isArray(p.variacoes)) {
@@ -227,6 +229,7 @@ app.get('/api/dashboard', async (req, res) => {
                     if (qtd < 5) {
                         estoqueBaixo.push({
                             nome: p.nome,
+                            categoria: p.categoria || 'Sem Categoria', // ADICIONADO: Envia a categoria
                             marca: v.marca || v.tamanho || 'Padrão',
                             estoque: qtd
                         });
@@ -349,6 +352,7 @@ app.post('/api/produtos', isAuthenticated, upload.single('imagem'), async (req, 
             imagem: req.file ? req.file.path : '', 
             variacoes: variacoes,
             ativo: true,
+            emBreve: req.body.emBreve === 'true',
             preco: precoBase
         });
 
@@ -383,6 +387,7 @@ app.put('/api/produtos/:id', isAuthenticated, upload.single('imagem'), async (re
             categoria: req.body.categoria,
             imagem: imagemFinal,
             variacoes: variacoes,
+            emBreve: req.body.emBreve === 'true',
             preco: precoBase
         });
 
@@ -538,6 +543,15 @@ app.post('/api/venda/:id/cancelar', isAuthenticated, async (req, res) => {
         res.json({ message: 'Venda cancelada!' });
     } catch (e) {
         res.status(500).json({ error: 'Erro ao cancelar' });
+    }
+});
+// 3. NOVA ROTA PARA LIMPAR PEDIDOS (Adicione onde estão as rotas de venda)
+app.delete('/api/vendas/limpar', isAuthenticated, async (req, res) => {
+    try {
+        await Venda.deleteMany({}); // Apaga TUDO da coleção de vendas
+        res.json({ success: true, message: 'Histórico limpo com sucesso!' });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao limpar histórico.' });
     }
 });
 

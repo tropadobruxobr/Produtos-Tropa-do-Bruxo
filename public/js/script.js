@@ -268,20 +268,40 @@ function criarCardProduto(p) {
     const div = document.createElement('div');
     div.className = 'card product-card'; 
     
+    // Define o HTML do botão ou do aviso
+    let botaoAcao;
+    
+    // VERIFICAÇÃO DO "EM BREVE" (Tem prioridade sobre esgotado)
+    if (p.emBreve) {
+        botaoAcao = `
+            <div class="btn-esgotado" style="
+                color: #00ccff; 
+                font-weight: 900; 
+                border: 1px solid #00ccff; 
+                padding: 6px; 
+                border-radius: 4px; 
+                text-align: center; 
+                margin-top: 5px; 
+                cursor: default; 
+                text-shadow: 0 0 5px #00ccff;">
+                EM BREVE 🚀
+            </div>`;
+    } 
+    else if (esgotado) {
+        botaoAcao = `<div class="btn-esgotado" style="color: red; font-weight: 900; border: 1px solid red; padding: 6px; border-radius: 4px; text-align: center; margin-top: 5px; cursor: default;">ESGOTADO</div>`;
+    } 
+    else {
+        botaoAcao = `<button onclick="abrirModal('${p._id || p.id}')">COMPRAR</button>`;
+    }
+    
     // Evita abrir o modal se clicar especificamente no aviso de esgotado, mas permite clicar na imagem
     div.onclick = (e) => { 
-        if(e.target.tagName !== 'BUTTON' && !e.target.classList.contains('btn-esgotado')) {
+        // Se clicar no botão ou for em breve/esgotado, não faz nada
+        // ATENÇÃO: !p.emBreve impede o clique se for em breve
+        if(e.target.tagName !== 'BUTTON' && !e.target.classList.contains('btn-esgotado') && !p.emBreve) {
             abrirModal(p._id || p.id); 
         }
     };
-    
-    // Define o HTML do botão ou do aviso de esgotado
-    let botaoAcao;
-    if (esgotado) {
-        botaoAcao = `<div class="btn-esgotado" style="color: red; font-weight: 900; border: 1px solid red; padding: 6px; border-radius: 4px; text-align: center; margin-top: 5px; cursor: default;">ESGOTADO</div>`;
-    } else {
-        botaoAcao = `<button onclick="abrirModal('${p._id || p.id}')">COMPRAR</button>`;
-    }
     
     div.innerHTML = `
         <img src="${imgUrl}" alt="${p.nome}" loading="lazy">

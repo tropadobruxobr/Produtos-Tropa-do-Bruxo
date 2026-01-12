@@ -178,22 +178,53 @@ async function carregarDashboard() {
 
         if(dataDash.grafico) renderizarGrafico(dataDash.grafico.labels, dataDash.grafico.valores);
 
-        // Alerta de Estoque Baixo
+        // --- Alerta de Estoque Baixo (MODIFICADO: Agrupado por Categoria) ---
         const divEstoque = document.getElementById('card-estoque-baixo');
         const listaEstoque = document.getElementById('lista-estoque-baixo');
         
         if (listaEstoque && dataDash.estoqueBaixo) {
             listaEstoque.innerHTML = '';
+            
             if (dataDash.estoqueBaixo.length > 0) {
                 if(divEstoque) divEstoque.style.display = 'block';
+
+                // 1. Agrupar itens por categoria
+                const itensPorCategoria = {};
+                
                 dataDash.estoqueBaixo.forEach(item => {
-                    listaEstoque.innerHTML += `
-                        <div style="background:#330000; color:#ffaaaa; padding:8px; margin-bottom:5px; border-left:3px solid red; border-radius:4px; font-size:0.9em;">
-                            <b>${item.nome}</b> (${item.marca}): ${item.estoque} un.
-                        </div>`;
+                    const cat = item.categoria || 'Geral'; 
+                    if (!itensPorCategoria[cat]) {
+                        itensPorCategoria[cat] = [];
+                    }
+                    itensPorCategoria[cat].push(item);
                 });
+
+                // 2. Ordenar as Categorias alfabeticamente
+                const categoriasOrdenadas = Object.keys(itensPorCategoria).sort((a, b) => a.localeCompare(b));
+
+                // 3. Renderizar
+                categoriasOrdenadas.forEach(cat => {
+                    // Título da Categoria
+                    listaEstoque.innerHTML += `
+                        <div style="color:var(--neon-orange, #ff5e00); font-weight:bold; margin: 15px 0 5px 0; border-bottom:1px solid #333; font-size:0.95em; text-transform: uppercase;">
+                            ${cat}
+                        </div>
+                    `;
+
+                    // Ordenar produtos dentro da categoria (Alfabeticamente pelo nome)
+                    const produtosOrdenados = itensPorCategoria[cat].sort((a, b) => a.nome.localeCompare(b.nome));
+
+                    produtosOrdenados.forEach(item => {
+                        listaEstoque.innerHTML += `
+                            <div style="background:rgba(50,0,0,0.5); color:#ffaaaa; padding:8px; margin-bottom:5px; border-left:3px solid red; border-radius:4px; font-size:0.9em; display:flex; justify-content:space-between; align-items:center;">
+                                <span><b>${item.nome}</b> <small>(${item.marca})</small></span>
+                                <span style="background:#500; padding:2px 6px; border-radius:4px; font-weight:bold;">${item.estoque} un.</span>
+                            </div>`;
+                    });
+                });
+
             } else {
-                listaEstoque.innerHTML = '<p style="color:#00ff88; padding:5px;">Estoque saudável! ✅</p>';
+                listaEstoque.innerHTML = '<p style="color:#00ff88; padding:5px; text-align:center;">Estoque saudável! ✅</p>';
             }
         }
 
@@ -275,6 +306,12 @@ async function salvarProduto(e) {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
+    
+    // ATUALIZAÇÃO: Enviar o status de "Em Breve"
+    if(document.getElementById('prod-embreve')) {
+        formData.set('emBreve', document.getElementById('prod-embreve').checked);
+    }
+    
     const idEdicao = document.getElementById('id-produto-editando').value;
 
     const variacoes = [];
@@ -338,6 +375,11 @@ function iniciarEdicao(produto) {
     if(form.categoria) form.categoria.value = produto.categoria;
     if(form.preco) form.preco.value = produto.preco;
 
+    // ATUALIZAÇÃO: Carregar checkbox "Em Breve"
+    if(document.getElementById('prod-embreve')) {
+        document.getElementById('prod-embreve').checked = produto.emBreve === true;
+    }
+
     const container = document.getElementById('container-variacoes');
     if(container) {
         container.innerHTML = '';
@@ -362,6 +404,11 @@ window.cancelarEdicao = function() {
     if(!form) return;
     form.reset();
     document.getElementById('id-produto-editando').value = '';
+    
+    // ATUALIZAÇÃO: Resetar checkbox "Em Breve"
+    if(document.getElementById('prod-embreve')) {
+        document.getElementById('prod-embreve').checked = false;
+    }
     
     const container = document.getElementById('container-variacoes');
     if(container) { 
@@ -501,6 +548,36 @@ window.cancelarVenda = function(id) {
             await fetch(`${API_URL}/api/venda/${id}/cancelar`, { method: 'POST' });
             Toast.fire({ icon: 'info', title: 'Pedido cancelado.' });
             carregarVendas();
+        }
+    });
+};
+
+// NOVA FUNÇÃO: ZERAR HISTÓRICO DE PEDIDOS
+window.limparHistoricoPedidos = function() {
+    swalDark.fire({
+        title: 'CUIDADO! ⚠️',
+        text: "Isso apagará TODOS os pedidos do histórico para sempre. Tem certeza?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, APAGAR TUDO',
+        confirmButtonColor: '#d33',
+        cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                const res = await fetch(`${API_URL}/api/vendas/limpar`, { method: 'DELETE' });
+                const data = await res.json();
+                
+                if (data.success) {
+                    Toast.fire({ icon: 'success', title: 'Histórico limpo!' });
+                    carregarVendas();
+                    carregarDashboard();
+                } else {
+                    swalDark.fire('Erro', 'Não foi possível limpar.', 'error');
+                }
+            } catch (e) {
+                swalDark.fire('Erro', 'Erro de conexão.', 'error');
+            }
         }
     });
 };
@@ -667,6 +744,9 @@ async function carregarConfiguracoesNoForm() {
         if(document.getElementById('config-nome')) document.getElementById('config-nome').value = conf.nomeLoja || '';
         if(document.getElementById('config-cor')) document.getElementById('config-cor').value = conf.corDestaque || '#ff6600';
         if(document.getElementById('social-zap-pedidos')) document.getElementById('social-zap-pedidos').value = conf.whatsapp || '';
+        
+        // NOVO: Carrega o link do Instagram
+        if(document.getElementById('social-insta')) document.getElementById('social-insta').value = conf.instagramLink || '';
         
         carregarCupons();
     } catch(e) {}
