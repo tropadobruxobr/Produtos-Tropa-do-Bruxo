@@ -640,7 +640,10 @@ async function finalizarCompra() {
             fecharModal('modal-carrinho');
             if(nomeInput) nomeInput.value = '';
 
-            window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+            setTimeout(() => {
+                window.location.href = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
+            }, 500);
+            
         } else {
             alert("Erro ao salvar pedido no sistema. Tente novamente.");
         }
