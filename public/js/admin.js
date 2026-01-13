@@ -579,6 +579,36 @@ async function carregarVendas() {
     } catch (e) { console.error("Erro vendas", e); }
 }
 
+// --- FUNÇÃO ADICIONADA: APROVAR VENDA ---
+window.confirmarVenda = function(id) {
+    swalDark.fire({
+        title: 'Aprovar Pedido?',
+        text: "Isso confirmará o pagamento e baixará o estoque.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, aprovar',
+        confirmButtonColor: '#00cc66',
+        cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                const res = await fetch(`${API_URL}/api/venda/${id}/confirmar`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    Toast.fire({ icon: 'success', title: 'Pedido Aprovado!' });
+                    carregarVendas();     // Atualiza a tabela
+                    carregarDashboard();  // Atualiza os números
+                } else {
+                    swalDark.fire('Erro', data.message || 'Erro ao aprovar.', 'error');
+                }
+            } catch (e) {
+                swalDark.fire('Erro', 'Erro de conexão.', 'error');
+            }
+        }
+    });
+};
+
 // --- NOVA FUNÇÃO PARA EXCLUIR MANUALMENTE ---
 window.deletarPedido = function(id) {
     swalDark.fire({
