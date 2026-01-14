@@ -463,7 +463,7 @@ async function carregarListaAdmin() {
         const produtosPorCategoria = {};
         
         produtos.forEach(p => {
-            // Se não tiver categoria, define como "Geral" ou "Sem Categoria"
+            // Se não tiver categoria, define como "Geral"
             const cat = p.categoria && p.categoria.trim() !== "" ? p.categoria : 'Geral'; 
             
             if (!produtosPorCategoria[cat]) {
@@ -475,37 +475,47 @@ async function carregarListaAdmin() {
         // 2. Ordenar as Categorias (A-Z)
         const categoriasOrdenadas = Object.keys(produtosPorCategoria).sort((a, b) => a.localeCompare(b));
 
-        // 3. Renderizar HTML
+        // 3. Renderizar HTML (COM ACORDEÃO)
         container.innerHTML = '';
 
-        categoriasOrdenadas.forEach(cat => {
-            // Título da Categoria
+        categoriasOrdenadas.forEach((cat, index) => {
+            const catId = `cat-group-${index}`; // ID único para o grupo
+            const produtosDaCat = produtosPorCategoria[cat].sort((a, b) => a.nome.localeCompare(b.nome));
+
+            // --- CABEÇALHO DA CATEGORIA (CLICÁVEL) ---
             container.innerHTML += `
-                <div style="
+                <div onclick="toggleCategoria('${catId}')" style="
                     background: #252525; 
-                    color: #ff5e00; 
-                    padding: 8px 15px; 
-                    margin-top: 20px; 
-                    margin-bottom: 10px; 
+                    color: #fff; 
+                    padding: 10px 15px; 
+                    margin-top: 15px; 
                     border-left: 4px solid #ff5e00; 
                     border-radius: 4px;
                     font-weight: bold;
                     text-transform: uppercase;
-                    font-size: 0.9rem;
+                    font-size: 0.95rem;
                     display: flex;
                     align-items: center;
                     gap: 10px;
-                ">
-                    <i class="fas fa-folder-open"></i> ${cat}
+                    cursor: pointer;
+                    user-select: none;
+                    transition: background 0.2s;
+                " onmouseover="this.style.background='#333'" onmouseout="this.style.background='#252525'">
+                    <i id="icon-${catId}" class="fas fa-folder" style="transition:0.3s;"></i> 
+                    <span>${cat}</span>
+                    <span style="margin-left:auto; font-size:0.8em; background:#333; padding:2px 8px; border-radius:10px; color:#aaa;">
+                        ${produtosDaCat.length} itens
+                    </span>
+                    <i class="fas fa-chevron-down" style="font-size:0.8em; color:#666;"></i>
                 </div>
             `;
 
-            // Ordenar produtos DENTRO da categoria (A-Z pelo nome)
-            const produtosDaCat = produtosPorCategoria[cat].sort((a, b) => a.nome.localeCompare(b.nome));
+            // --- CONTAINER DOS ITENS (INICIA FECHADO: display: none) ---
+            let itensHtml = `<div id="${catId}" style="display: none; animation: fadeIn 0.3s;">`;
 
             produtosDaCat.forEach(p => {
-                container.innerHTML += `
-                    <div style="background:#1a1a1a; padding:10px; margin-bottom:5px; margin-left:10px; border-radius:5px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center; border-left: 1px solid #444;">
+                itensHtml += `
+                    <div style="background:#1a1a1a; padding:10px; margin-bottom:5px; margin-left:15px; border-radius:5px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center; border-left: 2px solid #444;">
                         <div style="display:flex; align-items:center; gap:10px;">
                             <img src="${p.imagem || ''}" style="width:40px; height:40px; border-radius:4px; object-fit:cover; background:#333;">
                             <div>
@@ -523,10 +533,38 @@ async function carregarListaAdmin() {
                     </div>
                 `;
             });
+
+            itensHtml += `</div>`; // Fecha container dos itens
+            container.innerHTML += itensHtml;
         });
 
     } catch(e) { console.error("Erro lista produtos", e); }
 }
+// ==========================================
+// FUNÇÃO NOVA: ACORDEÃO DE CATEGORIAS
+// ==========================================
+window.toggleCategoria = function(id) {
+    const conteudo = document.getElementById(id);
+    const icone = document.getElementById('icon-' + id);
+    
+    if (conteudo.style.display === 'none') {
+        // ABRIR
+        conteudo.style.display = 'block';
+        if(icone) {
+            icone.classList.remove('fa-folder');
+            icone.classList.add('fa-folder-open');
+            icone.style.color = '#ffcc00'; // Muda cor para amarelo ao abrir
+        }
+    } else {
+        // FECHAR
+        conteudo.style.display = 'none';
+        if(icone) {
+            icone.classList.remove('fa-folder-open');
+            icone.classList.add('fa-folder');
+            icone.style.color = ''; // Volta a cor original
+        }
+    }
+};
 
 // ==========================================
 // 4. VENDAS
