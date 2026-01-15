@@ -183,11 +183,13 @@ function filtrarProdutos() {
     
     container.innerHTML = '';
 
-    // 1. Filtro global (Busca + Ativo)
+    // 1. Filtro global (Busca + Ativo + Visível)
     let produtosFiltrados = produtosGlobais.filter(produto => {
         const matchNome = produto.nome.toLowerCase().includes(termo);
         const isAtivo = produto.ativo !== false; 
-        return matchNome && isAtivo;
+        const isVisivel = produto.visivel !== false; // Se undefined, assume true
+        
+        return matchNome && isAtivo && isVisivel; // Só mostra se for visível
     });
 
     if (produtosFiltrados.length === 0) {
@@ -204,8 +206,17 @@ function filtrarProdutos() {
         // Pega categorias presentes nos produtos filtrados
         const categoriasPresentes = [...new Set(produtosFiltrados.map(p => p.categoria).filter(c => c))];
         
-        // Ordena Categorias A-Z
-        categoriasPresentes.sort((a, b) => a.localeCompare(b));
+        // ORDENAÇÃO DE CATEGORIAS (COM DESTAQUE)
+        const categoriaDestaque = configLoja.categoriaDestaque ? configLoja.categoriaDestaque.trim() : '';
+
+        categoriasPresentes.sort((a, b) => {
+            // Se 'a' for a categoria destaque, ela vem primeiro (-1)
+            if (categoriaDestaque && a.toLowerCase() === categoriaDestaque.toLowerCase()) return -1;
+            // Se 'b' for a destaque, ela vem primeiro (1)
+            if (categoriaDestaque && b.toLowerCase() === categoriaDestaque.toLowerCase()) return 1;
+            // Se não, ordem alfabética normal
+            return a.localeCompare(b);
+        });
 
         // Para cada categoria, cria um bloco
         categoriasPresentes.forEach(cat => {
@@ -214,10 +225,16 @@ function filtrarProdutos() {
             produtosDaCategoria.sort((a, b) => a.nome.localeCompare(b.nome));
 
             if (produtosDaCategoria.length > 0) {
-                // Título da Seção
+                // Título da Seção (Adiciona estrela se for destaque)
+                const isDestaque = categoriaDestaque && cat.toLowerCase() === categoriaDestaque.toLowerCase();
+                const icon = isDestaque ? '⭐ ' : '';
+                const cor = isDestaque ? 'color: var(--neon-orange); text-shadow: 0 0 10px rgba(255,94,0,0.5);' : '';
+
                 const titulo = document.createElement('h2');
                 titulo.className = 'titulo-secao';
-                titulo.innerText = cat;
+                titulo.innerHTML = `${icon}${cat}`;
+                if(isDestaque) titulo.style.cssText += cor;
+                
                 container.appendChild(titulo);
 
                 // Grid da Seção (Usa a classe injetada lá em cima)

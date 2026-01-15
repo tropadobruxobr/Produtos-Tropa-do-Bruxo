@@ -311,6 +311,10 @@ async function salvarProduto(e) {
     if(document.getElementById('prod-embreve')) {
         formData.set('emBreve', document.getElementById('prod-embreve').checked);
     }
+    // NOVA ATUALIZAÇÃO: Enviar o status de "Visível"
+    if(document.getElementById('prod-visivel')) {
+        formData.set('visivel', document.getElementById('prod-visivel').checked);
+    }
     
     const idEdicao = document.getElementById('id-produto-editando').value;
 
@@ -379,6 +383,11 @@ function iniciarEdicao(produto) {
     if(document.getElementById('prod-embreve')) {
         document.getElementById('prod-embreve').checked = produto.emBreve === true;
     }
+    // NOVA ATUALIZAÇÃO: Carregar checkbox "Visível"
+    if(document.getElementById('prod-visivel')) {
+        // Se undefined, assume true. Se false, desmarca.
+        document.getElementById('prod-visivel').checked = produto.visivel !== false;
+    }
 
     const container = document.getElementById('container-variacoes');
     if(container) {
@@ -408,6 +417,10 @@ window.cancelarEdicao = function() {
     // ATUALIZAÇÃO: Resetar checkbox "Em Breve"
     if(document.getElementById('prod-embreve')) {
         document.getElementById('prod-embreve').checked = false;
+    }
+    // NOVA ATUALIZAÇÃO: Resetar checkbox "Visível" (Default: checked/true)
+    if(document.getElementById('prod-visivel')) {
+        document.getElementById('prod-visivel').checked = true;
     }
     
     const container = document.getElementById('container-variacoes');
@@ -514,12 +527,16 @@ async function carregarListaAdmin() {
             let itensHtml = `<div id="${catId}" style="display: none; animation: fadeIn 0.3s;">`;
 
             produtosDaCat.forEach(p => {
+                // NOVA LÓGICA: Se oculto, deixa meio transparente e com ícone de olho cortado
+                const estiloOculto = p.visivel === false ? 'opacity: 0.5; border-left: 2px solid red;' : 'border-left: 2px solid #444;';
+                const avisoOculto = p.visivel === false ? '<i class="fas fa-eye-slash" style="color:red; margin-right:5px;" title="Oculto na loja"></i>' : '';
+
                 itensHtml += `
-                    <div style="background:#1a1a1a; padding:10px; margin-bottom:5px; margin-left:15px; border-radius:5px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center; border-left: 2px solid #444;">
+                    <div style="background:#1a1a1a; padding:10px; margin-bottom:5px; margin-left:15px; border-radius:5px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center; ${estiloOculto}">
                         <div style="display:flex; align-items:center; gap:10px;">
                             <img src="${p.imagem || ''}" style="width:40px; height:40px; border-radius:4px; object-fit:cover; background:#333;">
                             <div>
-                                <div style="font-weight:bold; color:white;">${p.nome}</div>
+                                <div style="font-weight:bold; color:white;">${avisoOculto}${p.nome}</div>
                                 <div style="font-size:0.8em; color:#888;">
                                     ${p.variacoes ? p.variacoes.length + ' opções' : 'Único'} 
                                     ${p.emBreve ? '<span style="color:#00ccff; margin-left:5px;">(Em Breve)</span>' : ''}
@@ -540,6 +557,7 @@ async function carregarListaAdmin() {
 
     } catch(e) { console.error("Erro lista produtos", e); }
 }
+
 // ==========================================
 // FUNÇÃO NOVA: ACORDEÃO DE CATEGORIAS
 // ==========================================
@@ -900,6 +918,11 @@ async function carregarConfiguracoesNoForm() {
         
         // NOVO: Carrega o link do Instagram
         if(document.getElementById('social-insta')) document.getElementById('social-insta').value = conf.instagramLink || '';
+
+        // NOVA MODIFICAÇÃO: Carregar Categoria Destaque
+        if(document.getElementById('config-cat-destaque')) {
+            document.getElementById('config-cat-destaque').value = conf.categoriaDestaque || '';
+        }
         
         carregarCupons();
     } catch(e) {}
@@ -964,4 +987,4 @@ window.deletarCupom = function(cod) {
             carregarCupons();
         }
     });
-};
+};s

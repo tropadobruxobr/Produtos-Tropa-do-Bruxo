@@ -54,6 +54,7 @@ const ProdutoSchema = new mongoose.Schema({
     imagem: String,
     variacoes: [Object], 
     ativo: { type: Boolean, default: true },
+    visivel: { type: Boolean, default: true }, // <--- NOVO CAMPO (OCULTAR PRODUTO)
     emBreve: { type: Boolean, default: false },
     dataCriacao: { type: Date, default: Date.now }
 });
@@ -100,7 +101,8 @@ const ConfigSchema = new mongoose.Schema({
     banner3: String,
     corDestaque: String,
     whatsappFlutuante: String,
-    instagramLink: String
+    instagramLink: String,
+    categoriaDestaque: String // <--- NOVO CAMPO (CATEGORIA DESTAQUE)
 }, { strict: false }); 
 const Config = mongoose.model('Config', ConfigSchema);
 
@@ -352,6 +354,7 @@ app.post('/api/produtos', isAuthenticated, upload.single('imagem'), async (req, 
             imagem: req.file ? req.file.path : '', 
             variacoes: variacoes,
             ativo: true,
+            visivel: req.body.visivel === 'true', // <--- SALVA O STATUS VISÍVEL
             emBreve: req.body.emBreve === 'true',
             preco: precoBase
         });
@@ -387,6 +390,7 @@ app.put('/api/produtos/:id', isAuthenticated, upload.single('imagem'), async (re
             categoria: req.body.categoria,
             imagem: imagemFinal,
             variacoes: variacoes,
+            visivel: req.body.visivel === 'true', // <--- ATUALIZA O STATUS VISÍVEL
             emBreve: req.body.emBreve === 'true',
             preco: precoBase
         });
